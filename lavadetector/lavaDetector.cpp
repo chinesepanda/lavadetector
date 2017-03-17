@@ -370,7 +370,7 @@ int lavaDetector::getPosOfDetect()//确定岩棉检测点、比例尺、熔岩检测点
 	/*确定岩棉检测点、比例尺、熔岩检测点*/
 	if(15 == iNumOfFrames)
 	{
-	
+	//
 	}
 	return 0;
 }
