@@ -31,9 +31,12 @@ public:
 private://私有成员函数
 	int colorToBinary(Mat src_color,Mat& dst_binary,double dThreshold);//把输入的原始彩色帧转换为二值帧
 	int selectContours(Mat& binary);//对二值图中的多轮廓进行筛选，去除噪声点，并填补孔洞
-	int getPosOfBase(Point& pposofbase,int frames);//用于确定基准点的位置（跨帧匹配）
-	int getPosOfBase2_collect(Point& pposofbase,int frames);//用于确定基准点的位置（收集特征）
-	int getPosOfBase2(Point& pposofbase,int frames);//用于确定基准点的位置（特征匹配）
+	//确定基准点
+	int getPosOfBase();//用于确定基准点的位置1（跨帧匹配）
+	int getPosOfBase2_collect();//用于确定基准点的位置2（收集特征）
+	int getPosOfBase2();//用于确定基准点的位置2（特征匹配）
+	//确定岩棉检测点、比例尺、熔岩检测点
+	int getPosOfDetect();//确定岩棉检测点、比例尺、熔岩检测点
 private://私有成员变量
 	int iWidthOfStream_p;//下落流股的宽度（以像素计）
 	double dWidthOfStream_mm;//下落流股的宽度（通过比例尺折算为以mm计）

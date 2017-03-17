@@ -23,7 +23,7 @@ int main()
 	Mat imagetoshow_binary;
 	lavaDetector myDetector;
 
-	for(int i = 0;i<170;i++)  //137! //170!
+	for(int i = 0;i<137;i++)  //137! //170!
 	{
 		video>>firstImage;
 	}

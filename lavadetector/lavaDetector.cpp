@@ -9,7 +9,7 @@ using namespace std;
 using namespace cv;
 
 //¹¹ÔìÓëÎö¹¹º¯Êı
-lavaDetector::lavaDetector():iPeriod(20),dThreshold(30)
+lavaDetector::lavaDetector():iPeriod(20),dThreshold(25)
 {
 	iNumOfFrames = 0;
 }
@@ -62,7 +62,7 @@ int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
 
 	if (iNumOfFrames >= 1 && iNumOfFrames <= 10)//Ç°10Ö¡¹Ø¼üµã¶¨Î»
 	{
-		if (1 == iNumOfFrames)
+		if (1 == iNumOfFrames)//µÚÒ»Ö¡Ïà¹Ø²ÎÊıÖÃÁã
 		{
 			vDescriptors.clear();
 			vKeyPoints.clear();//Ã¿Ö¡µÄORB¹Ø¼üµã*
@@ -70,7 +70,7 @@ int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
 			pPosOfBase.x = 0;
 			pPosOfBase.y = 0;
 		}
-		getPosOfBase2(pPosOfBase, iNumOfFrames);//È·¶¨µ±Ç°ÖÜÆÚµÄ¹Ø¼üµã
+		getPosOfBase2();//È·¶¨µ±Ç°ÖÜÆÚµÄ¹Ø¼üµã
 	}
 	else if (iNumOfFrames >= 11 && iNumOfFrames <= 15)//11-15Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢Á÷¹É¼à²âµã¡¢±ÈÀı³ß
 	{
@@ -146,7 +146,7 @@ int lavaDetector::selectContours(Mat& binary)//¶Ô¶şÖµÍ¼ÖĞµÄ¶àÂÖÀª½øĞĞÉ¸Ñ¡£¬È¥³ıÔ
 	return 0;
 }
 
-int lavaDetector::getPosOfBase(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ
+int lavaDetector::getPosOfBase()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ
 {
 	/*	vector<Mat> vDescriptors;//*
 	vector<vector<KeyPoint>> vKeyPoints;//Ã¿Ö¡µÄORB¹Ø¼üµã*
@@ -209,7 +209,7 @@ int lavaDetector::getPosOfBase(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ
 	return 0;
 }
 
-int lavaDetector::getPosOfBase2_collect(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ
+int lavaDetector::getPosOfBase2_collect()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ
 {
 	/*	vector<Mat> vDescriptors;//*
 	vector<vector<KeyPoint>> vKeyPoints;//Ã¿Ö¡µÄORB¹Ø¼üµã*
@@ -285,41 +285,40 @@ int lavaDetector::getPosOfBase2_collect(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨
 	return 0;
 }
 
-int lavaDetector::getPosOfBase2(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ
+int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 {
 	/*	vector<Mat> vDescriptors;//*
 	vector<vector<KeyPoint>> vKeyPoints;//Ã¿Ö¡µÄORB¹Ø¼üµã*
 	vector<vector<Point>> vPoints;//Æ¥ÅäºóÃ¿Ö¡µÄ±¸Ñ¡µã**/
-	Mat theNormal = imread("vDescriptors.png",0);
+	Mat theNormal = imread("vDescriptors.png",0);//¼ÓÔØÄ¿±êÌØÕ÷
 	const double rate = 0.4;//È¥µôÉÏ°ë²¿·ÖµÄ±ÈÀı
+	//°ÑÔ­Í¼Ïñ×ª»»Îª»Ò¶ÈÍ¼£¬²¢²ÃÇĞ
 	Mat grayImage;
 	cvtColor(curImage_color, grayImage, CV_BGR2GRAY);
 	Mat ROIImage = grayImage(Range((int)(rate*sizeOfCur.height), sizeOfCur.height), Range(0, sizeOfCur.width));
-	/*µ±Ç°Ö¡µÄÌØÕ÷µã¼ì²â*/
+	//µ±Ç°Ö¡µÄÌØÕ÷µã¼ì²â
 	OrbFeatureDetector featureDetector;//ORBµã¼ì²âÆ÷
-	vector<KeyPoint> keyPoints;
-	Mat descriptors;
+	vector<KeyPoint> keyPoints;//¹Ø¼üµã
+	Mat descriptors;//¹Ø¼üµãÌØÕ÷ÃèÊö×Ó
 	featureDetector.detect(ROIImage, keyPoints);//¼ì²âÌØÕ÷¹Ø¼üµã
-
 	OrbDescriptorExtractor featureExtractor;//ORBµãÌØÕ÷ÌáÈ¡Æ÷
-	featureExtractor.compute(ROIImage, keyPoints, descriptors);
-	//´æÈë³ÉÔ±±äÁ¿
+	featureExtractor.compute(ROIImage, keyPoints, descriptors);//¼ÆËã¹Ø¼üµãµÄÌØÕ÷ÃèÊö×Ó
+	//´æÈë³ÉÔ±±äÁ¿ÈİÆ÷
 	vDescriptors.push_back(descriptors);//Ã¿Ö¡µÄORB¹Ø¼üµãÃèÊö×Ó
-	vKeyPoints.push_back(keyPoints);//Ã¿Ö¡µÄORB¹Ø¼üµã*
+	vKeyPoints.push_back(keyPoints);//Ã¿Ö¡µÄORB¹Ø¼üµã
 
 	//ÊµÀı»¯Ò»¸öÆ¥ÅäÆ÷
 	BruteForceMatcher <L2<float>> matcher;
 	vector<DMatch> matches;//Æ¥Åä½á¹û
-	matcher.match(theNormal, descriptors, matches);
+	matcher.match(theNormal, descriptors, matches);//Ñ°ÕÒµ±Ç°Ö¡×îÆ¥ÅäµÄÌØÕ÷µã
 
-	//°Ñ¹Ø¼üµã×ª»»ÎªÆÕÍ¨µã,²¢´æÈëvector<vector<Point>> vPoints£¬×÷Îª±¸Ñ¡µã
-	vector<Point> points;
+	//°Ñ¹Ø¼üµã×ª»»ÎªÆÕÍ¨µã,²¢´æÈëvector<vector<Point>> vPoints£¬×÷Îª±¸Ñ¡µã£¨Îª±£Ö¤Á½ÖÖ·½·¨µÄ¼æÈİ£¬²ÉÓÃÈİÆ÷Ç¶Ì×£©
+	vector<Point> points;//¹Ø¼üµã×ª»»ÎªÆÕÍ¨µã
 	points.push_back(keyPoints[matches[0].trainIdx].pt);
-	distance[iNumOfFrames-1] = matches[0].distance;
+	distance[iNumOfFrames-1] = matches[0].distance;//µ±Ç°Ö¡×îÆ¥ÅäµÄÌØÕ÷µãÓëÄ¿±êµãµÄÌØÕ÷¾àÀë
 	points[0].y += (int)(rate*sizeOfCur.height);//»Ö¸´ÎªÔ­Í¼ÏñÖĞµÄ×ø±êµã
-
-	vPoints.push_back(points);
-	//ÇåÀí
+	vPoints.push_back(points);//×îÆ¥Åäµã×ø±ê´æÈë³ÉÔ±±äÁ¿ÈİÆ÷
+	//ÇåÀíÈİÆ÷
 	points.clear();
 	matcher.clear();
 	matches.clear();
@@ -327,17 +326,51 @@ int lavaDetector::getPosOfBase2(Point& pposofbase, int frames)//ÓÃÓÚÈ·¶¨»ù×¼µãµÄ
 
 	if (10 == iNumOfFrames)//µÚ10Ö¡Ê±£¬È·¶¨»ù×¼µã
 	{
-		int small = 0;
-		int num = distance[0];
+		int sIndex = 0;//×î½ü¾àÀëµÄË÷ÒıÖµ
+		int num = distance[0];//×î½ü¾àÀë
 		for(int i = 0;i<10;i++)
 		{
 			if(distance[i] < num)
 			{
 				num = distance[i];
-				small = i;
+				sIndex = i;
 			}
 		}
-		pPosOfBase = vPoints[small][0];
+		pPosOfBase = vPoints[sIndex][0];
+	}
+	return 0;
+}
+
+int lavaDetector::getPosOfDetect()//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
+{
+	const Mat& binary = curImage_binary;
+	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨11-15Ö¡ÄÚ¶¼Ö´ĞĞ£¬15Ö¡×îÖÕÈ·¶¨£©*/
+	int baseX = pPosOfBase.x;//»ù×¼µãµÄx
+	int baseY = pPosOfBase.y;//»ù×¼µãµÄy
+	vector<int> distance;//¼ÇÂ¼ÉÏÏÂ¾àÀë
+	for(int x = baseX;x < (sizeOfCur.width - baseX); x++)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
+	{
+		if(binary.ptr<uchar>(baseY)[x] == 255)//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª255£¬Ôò¼ÌĞøÏò×ó±éÀú
+		{
+			distance.push_back(baseY);
+		}
+		else//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª0£¬Ôò¿ªÊ¼ÏòÉÏ±éÀú
+		{
+			for(int y = baseY; y > 0; y--)//µ±Ç°µãÏòÉÏ±éÀú
+			{
+				if(binary.ptr<uchar>(y)[x] == 255 && binary.ptr<uchar>(y+1)[x] == 0)//Èç¹û¸ÃµãÁÁ¶È¸ÕºÃÓÉ0±äÎª255£¬ÔòÍ£Ö¹ÏòÉÏ
+				{
+					distance.push_back(baseY - y);//¼ÇÂ¼¾àÀë
+					break;	
+				}
+			}
+		}
+	}
+
+	/*È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã*/
+	if(15 == iNumOfFrames)
+	{
+	
 	}
 	return 0;
 }
