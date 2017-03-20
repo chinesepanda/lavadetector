@@ -32,14 +32,21 @@ private://私有成员函数
 	int colorToBinary(Mat src_color,Mat& dst_binary,double dThreshold);//把输入的原始彩色帧转换为二值帧
 	int selectContours(Mat& binary);//对二值图中的多轮廓进行筛选，去除噪声点，并填补孔洞
 	//确定基准点
-	int getPosOfBase();//用于确定基准点的位置1（跨帧匹配）
-	int getPosOfBase2_collect();//用于确定基准点的位置2（收集特征）
+	int getPosOfBase();//*用于确定基准点的位置1（跨帧匹配）
+	int getPosOfBase2_collect();//*用于确定基准点的位置2（收集特征）
 	int getPosOfBase2();//用于确定基准点的位置2（特征匹配）
 	//确定岩棉检测点、比例尺、熔岩检测点
-	int getPosOfDetect();//确定岩棉检测点、比例尺、熔岩检测点
+	int getPosOfDetect();//11-21帧确定岩棉检测点、比例尺、熔岩检测点
+	int getPosOfDetect2();//*每帧都确定岩棉检测点、比例尺、熔岩检测点
 	void select_sort(int array[], int n);//选择排序
-	//绘制程序
-	int plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color);//在图中绘制点的target
+	//检测岩棉厚度（像素及mm为单位）
+	int detectThickOfWool();
+	//检测熔岩流股宽度（像素及mm为单位）
+
+	//检测熔岩流股下落点
+
+	//绘制特殊点程序
+	int plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color,int modeOfPlot);//在图中绘制点的target
 private://私有成员变量
 	int iWidthOfStream_p;//下落流股的宽度（以像素计）
 	double dWidthOfStream_mm;//下落流股的宽度（通过比例尺折算为以mm计）
@@ -67,9 +74,11 @@ private://私有成员变量
 	vector<vector<DMatch>> vMatches;//测试2
 	double distance[10];//ceshi3
 	//确定成纤监测点的变量
-	int iBiggestDistance[5];//记录11-15帧成纤区高度最大值
-	int iCorresX[5];//11-15帧成纤区取得高度最大值下对应的x坐标
+	int edgeX;//向左遍历的左边界
+	int iBiggestDistance[11];//记录11-15帧成纤区高度最大值
+	int iCorresX[11];//11-15帧成纤区取得高度最大值下对应的x坐标
 	Point pPosThickDetect;//成纤检测点的坐标
+	Point pPosThickPlot;//成纤绘制点的坐标
 	int iRadiusOfCircle_p;//轴承半径的像素数
     const double iRadiusOfCircle_mm;//轴承半径的毫米数
 	Point pPosStreamDetect;//流股检测点的坐标

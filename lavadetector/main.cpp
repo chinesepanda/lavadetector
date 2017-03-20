@@ -23,7 +23,7 @@ int main()
 	Mat imagetoshow_binary;
 	lavaDetector myDetector;
 
-	for(int i = 0;i<137;i++)  //137! //170!
+	for(int i = 0;i<100;i++)  //137! //170!
 	{
 		video>>firstImage;
 	}
@@ -47,7 +47,7 @@ int main()
 		imshow("image_binary",imagetoshow_binary);
 		//myDetector.getImageToShow(imagetoshow);
 		//imshow("image",imagetoshow);
-		if(waitKey(20) == 27 )
+		if(waitKey(400) == 27 )
 		{
 			break;
 		}

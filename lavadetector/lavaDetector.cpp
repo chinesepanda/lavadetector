@@ -9,13 +9,15 @@ using namespace std;
 using namespace cv;
 
 //¹¹ÔìÓëÎö¹¹º¯Êı
-lavaDetector::lavaDetector():iPeriod(50),dThreshold(22),iRadiusOfCircle_mm(400)
+lavaDetector::lavaDetector():iPeriod(500)/*¼ì²âÖÜÆÚ*/,dThreshold(25)/*·Ö¸îµÄãĞÖµ*/,iRadiusOfCircle_mm(400)/*Öá³ĞÔ¤ÉèÖÃµÄ°ë¾¶*/
 {
 	iNumOfFrames = 0;
+	iThickOfWool_p = 0;
 }
 lavaDetector::lavaDetector(int period, double thresh) : iPeriod(period), dThreshold(thresh),iRadiusOfCircle_mm(400)
 {
 	iNumOfFrames = 0;
+	iThickOfWool_p = 0;
 }
 lavaDetector::~lavaDetector()
 {
@@ -72,15 +74,16 @@ int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
 		}
 		getPosOfBase2();//È·¶¨µ±Ç°ÖÜÆÚµÄ¹Ø¼üµã
 	}
-	else if (iNumOfFrames >= 11 && iNumOfFrames <= 15)//11-15Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢Á÷¹É¼à²âµã¡¢±ÈÀı³ß
+	else if (iNumOfFrames >= 11 && iNumOfFrames <= 21)//11-15Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢Á÷¹É¼à²âµã¡¢±ÈÀı³ß
 	{
 		getPosOfDetect();//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 		
 	}
-	else//¼ì²âÈıÏî²ÎÊı
+	else//´Ó22Ö¡¿ªÊ¼£¬¼ì²âÈıÏîÊı¾İ 
 	{
-
+		detectThickOfWool();//¼ì²â³ÉÏËºñ¶È
 	}
+
 	return 0;
 }
 int lavaDetector::resetAll()//ÖØÖÃÄÚ²¿²ÎÊı,Ô¤Áô½Ó¿Ú
@@ -106,13 +109,17 @@ int lavaDetector::getImageToShow(Mat& imagetoshow)//»æÖÆ²¢»ñÈ¡´ıÏÔÊ¾µÄ¼ì²â½á¹û,×
 	{
 		if(iNumOfFrames >= 11)
 		{
-			circle(imageToShow_color, pPosOfBase, 5, Scalar(255, 0, 0), 3);//»æÖÆ¹Ø¼üµã
+			plotPointTarget(imageToShow_color,pPosOfBase,Scalar(0,0,255),1);
 		}
-		if(iNumOfFrames >= 15)
+		if(iNumOfFrames > 21)
 		{	
-			circle(imageToShow_color,pPosThickDetect,5,Scalar(255,0,0),4);
-			circle(imageToShow_color,pPosStreamDetect,5,Scalar(0,0,255),4);
+			plotPointTarget(imageToShow_color,pPosThickDetect,Scalar(255,0,0),2);
+			plotPointTarget(imageToShow_color,pPosStreamDetect,Scalar(255,0,0),2);
+			//»æÖÆ¼ì²â½á¹û pPosThickPlot
+			plotPointTarget(imageToShow_color,pPosThickPlot,Scalar(255,255,255),0);//³ÉÏË»æÖÆµãµÄ×ø±ê
+			cout<<iThickOfWool_p<<endl;
 		}
+
 		imageToShow_color.copyTo(imagetoshow);
 		
 	}
@@ -341,19 +348,38 @@ int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 			}
 		}
 		pPosOfBase = vPoints[sIndex][0];
+		/*Ñ°ÕÒ±éÀúµÄ×ó±ß½ç*/
+		for(int a = 0;a < pPosOfBase.x;a++)
+		{
+			int bre = 0;
+			for(int b = 0;b <pPosOfBase.y;b++ )
+			{
+				if(255 == curImage_binary.ptr<uchar>(b)[a])
+				{
+					edgeX = a;
+					bre = 1;
+					break;
+				}
+			}
+			if(1 == bre)
+			{
+				break;
+			}
+		}
 	}
 	return 0;
 }
 
-int lavaDetector::getPosOfDetect()//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
+int lavaDetector::getPosOfDetect()//11-21Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 {
+	//double t1=(double)getTickCount();
 	const Mat& binary = curImage_binary;
-	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨11-15Ö¡ÄÚ¶¼Ö´ĞĞ£¬15Ö¡×îÖÕÈ·¶¨£©*/
+	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨11-21Ö¡ÄÚ¶¼Ö´ĞĞ£¬21Ö¡×îÖÕÈ·¶¨£©*/
 	const int baseX = pPosOfBase.x;//»ù×¼µãµÄx
 	const int baseY = pPosOfBase.y;//»ù×¼µãµÄy
 	vector<int> vDistance;//¼ÇÂ¼ÉÏÏÂ¾àÀë
 	vector<int> vX;
-	for(int x = baseX;x >= 0; x--)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
+	for(int x = baseX;x >= edgeX; x--)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
 	{
 		vX.push_back(x);
 		if(binary.ptr<uchar>(baseY)[x] == 255)//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª255£¬Ôò¼ÌĞøÏò×ó±éÀú
@@ -373,8 +399,7 @@ int lavaDetector::getPosOfDetect()//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 				{
 					vDistance.push_back(0);//ÏòÉÏ±éÀúÖÁ×î¶¥¶Ë£¬ÈÔÈ»Ã»ÓĞÂú×ãÌõ¼şµÄÇé¿ö£¨¸ÕºÃÓÉ0±äÎª255£©£¬Ôò¾àÀëÉèÎª0
 				}
-			}
-			
+			}	
 		}
 	}
 	//Ñ°ÕÒvDÖĞµÄ×î´ó¾àÀë
@@ -385,42 +410,188 @@ int lavaDetector::getPosOfDetect()//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 	vDistance.clear();
 	vX.clear();
 	/*È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã*/
-	if(15 == iNumOfFrames)
+	if(21 == iNumOfFrames)
 	{
 		/*³ÉÏË¼à²âµã*/
-		int iBiggestDistance_sorted[5] = {0};
-		memcpy(iBiggestDistance_sorted,iBiggestDistance,5*sizeof(int));//´´½¨Ò»¸ö¿½±´Êı×é
-		select_sort(iBiggestDistance_sorted, 5);//¶Ô¿½±´Êı×é½øĞĞÅÅĞò
-		for(int i = 0;i<5;i++)
+		int iBiggestDistance_sorted[11] = {0};
+		memcpy(iBiggestDistance_sorted,iBiggestDistance,11*sizeof(int));//´´½¨Ò»¸ö¿½±´Êı×é
+		select_sort(iBiggestDistance_sorted, 11);//¶Ô¿½±´Êı×é½øĞĞÅÅĞò
+		for(int i = 0;i<11;i++)
 		{
-			if(iBiggestDistance[i] == iBiggestDistance_sorted[2])//»ñÈ¡Êı×éÖĞÎ»Êı¶ÔÓ¦µÄindex¼°¶ÔÓ¦µÄx×ø±ê
+			if(iBiggestDistance[i] == iBiggestDistance_sorted[5])//»ñÈ¡Êı×éÖĞÎ»Êı¶ÔÓ¦µÄindex¼°¶ÔÓ¦µÄx×ø±ê
 			{
 				pPosThickDetect.x = iCorresX[i];//³ÉÏË¼à²âµãµÄ×ø±ê
-				pPosThickDetect.y = baseY - iBiggestDistance_sorted[2];
+				pPosThickDetect.y = baseY - iBiggestDistance_sorted[5];
 
 				iRadiusOfCircle_p = baseX - iCorresX[i];//Öá³Ğ°ë¾¶µÄÏñËØÊı
 				dScale = iRadiusOfCircle_mm /((double)iRadiusOfCircle_p);//¼ÆËã±ÈÀı³ß
 
 				pPosStreamDetect.x = baseX;//Á÷¹É¼ì²âµãµÄx×ø±êÓë»ù×¼µãx×ø±êÏàÍ¬
-			    pPosStreamDetect.y = pPosThickDetect.y - iBiggestDistance_sorted[2];//Á÷¹É¼ì²âµãµÄy×ø±êµÈÓÚ³ÉÏË¼à²âµãµÄy×ø±ê¼õÈ¥Öá³Ğ×İ°ë¾¶
+			    pPosStreamDetect.y = pPosThickDetect.y - iBiggestDistance_sorted[5];//Á÷¹É¼ì²âµãµÄy×ø±êµÈÓÚ³ÉÏË¼à²âµãµÄy×ø±ê¼õÈ¥Öá³Ğ×İ°ë¾¶
 				break;
 			}
 		}
 	}
+	//double t2=(double)getTickCount();
+	//double time = (t2-t1)/getTickFrequency();
+	//cout<<time<<endl;
 	return 0;
 }
 
-int lavaDetector::plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color)//ÔÚÍ¼ÖĞ»æÖÆµãµÄtarget
+int lavaDetector::getPosOfDetect2()//Ã¿Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 {
+	
+	 double t1=(double)getTickCount();
+	const Mat& binary = curImage_binary;
+	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨£©*/
+	const int baseX = pPosOfBase.x;//»ù×¼µãµÄx
+	const int baseY = pPosOfBase.y;//»ù×¼µãµÄy
+	vector<int> vDistance;//¼ÇÂ¼ÉÏÏÂ¾àÀë
+	vector<int> vX;
+	for(int x = baseX;x >= edgeX; x--)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
+	{
+		vX.push_back(x);
+		if(binary.ptr<uchar>(baseY)[x] == 255)//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª255£¬Ôò¼ÌĞøÏò×ó±éÀú
+		{
+			vDistance.push_back(0);//°Ñµ±Ç°¾àÀëÉèÎª¿ÉÄÜµÄ×îĞ¡Öµ0
+		}
+		else//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª0£¬Ôò¿ªÊ¼ÏòÉÏ±éÀú
+		{
+			for(int y = baseY; y >= 0; y--)//µ±Ç°µãÏòÉÏ±éÀú
+			{
+				if(binary.ptr<uchar>(y)[x] == 255 && binary.ptr<uchar>(y+1)[x] == 0)//Èç¹û¸ÃµãÁÁ¶È¸ÕºÃÓÉ0±äÎª255£¬ÔòÍ£Ö¹ÏòÉÏ
+				{
+					vDistance.push_back(baseY - y);//¼ÇÂ¼¾àÀë
+					break;	
+				}
+				if(0 == y)
+				{
+					vDistance.push_back(0);//ÏòÉÏ±éÀúÖÁ×î¶¥¶Ë£¬ÈÔÈ»Ã»ÓĞÂú×ãÌõ¼şµÄÇé¿ö£¨¸ÕºÃÓÉ0±äÎª255£©£¬Ôò¾àÀëÉèÎª0
+				}
+			}	
+		}
+	}
+	//Ñ°ÕÒvDÖĞµÄ×î´ó¾àÀë
+	vector<int>::iterator biggest = max_element(begin(vDistance), end(vDistance));//µü´úÆ÷
+	int biggestY = *biggest;//´æÈë×î´ó¾àÀë
+	int biggestX = vX[std::distance(std::begin(vDistance), biggest)];//´æÈë×î´ó¾àÀë¶ÔÓ¦µÄx×ø±ê
+	//ÇåÀí
+	vDistance.clear();
+	vX.clear();
+	/*È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã*/
 
-	if(3 == src_color.channels())//Èç¹ûÊÇ²ÊÉ«Í¼
+	pPosThickDetect.x = biggestX;//³ÉÏË¼à²âµãµÄ×ø±ê
+	pPosThickDetect.y = baseY - biggestY;
+
+	iRadiusOfCircle_p = baseX - biggestX;//Öá³Ğ°ë¾¶µÄÏñËØÊı
+	dScale = iRadiusOfCircle_mm /((double)iRadiusOfCircle_p);//¼ÆËã±ÈÀı³ß
+
+	pPosStreamDetect.x = baseX;//Á÷¹É¼ì²âµãµÄx×ø±êÓë»ù×¼µãx×ø±êÏàÍ¬
+	pPosStreamDetect.y = pPosThickDetect.y - biggestY;//Á÷¹É¼ì²âµãµÄy×ø±êµÈÓÚ³ÉÏË¼à²âµãµÄy×ø±ê¼õÈ¥Öá³Ğ×İ°ë¾¶
+
+
+	double t2=(double)getTickCount();
+	double time = (t2-t1)/getTickFrequency();
+	cout<<time<<endl;
+	return 0;
+}
+
+int lavaDetector::plotPointTarget(Mat& src_color/*´ı»æÖÆµÄÍ¼Ïñ*/,Point pointForPlot,const Scalar& color/*»æÖÆµÄÑÕÉ«*/,int modeOfPlot/*»æÖÆ·½Ê½*/)//ÔÚÍ¼ÖĞ»æÖÆµãµÄtarget
+{
+	/*modeOfPlot»æÖÆ·½Ê½£º
+	0:target + ·½¿ò
+	1:target+Ô²È¦
+	2:Ö±½Ó»æÖÆÔ²È¦
+	*/
+	const int iSide = 61;//·½¿ò±ß³¤
+	if(0 == modeOfPlot)//target + ·½¿ò
 	{
-		
+		Point pt1[4] = {pointForPlot,pointForPlot,pointForPlot,pointForPlot};//targetËÄÌõ×¼ĞÇÏßµÄÆğÊ¼µã
+		Point pt2[4] = {pointForPlot,pointForPlot,pointForPlot,pointForPlot};//targetËÄÌõ×¼ĞÇÏßµÄ½áÊøµã
+		Point pt3[4] = {pointForPlot,pointForPlot,pointForPlot,pointForPlot};//·½¿òËÄ½Çµã
+
+		//ÉèÖÃÏà¶ÔÆ«ÒÆÁ¿
+		pt1[0].y -= 30; pt1[1].x += 30;	pt1[2].y += 30;	pt1[3].x -= 30;
+		pt2[0].y -= 70;	pt2[1].x += 70;	pt2[2].y += 70;	pt2[3].x -= 70;
+		pt3[0].x -= 80; pt3[0].y -= 80;	pt3[1].x += 80; pt3[1].y -= 80;	pt3[2].x += 80; pt3[2].y += 80;	pt3[3].x -= 80; pt3[3].y += 80;	
+		Point pt4[4] = {pt3[0],pt3[1],pt3[2],pt3[3]};//·½¿òËÄ½Ç×óÆğÊ¼µã
+		Point pt5[4] = {pt3[0],pt3[1],pt3[2],pt3[3]};//·½¿òËÄ½ÇÓÒÆğÊ¼µã
+		pt4[0].y =pt3[0].y + 40; pt4[1].x = pt3[1].x - 40; pt4[2].y = pt3[2].y - 40; pt4[3].x = pt3[3].x + 40;
+		pt5[0].x =pt3[0].x + 40; pt5[1].y = pt3[1].y + 40; pt5[2].x = pt3[2].x - 40; pt5[3].y = pt3[3].y - 40;
+		//»æÖÆ
+		for(int i = 0;i<4;i++)
+		{
+			line(src_color,pt1[i],pt2[i],color,4);//»æÖÆ×¼ĞÇÏß
+			line(src_color,pt3[i],pt4[i],color,4);//»æÖÆ±ß¿òÏß
+			line(src_color,pt3[i],pt5[i],color,4);//»æÖÆ±ß¿òÏß
+		}
+		//circle(src_color,pointForPlot,5,color,4);//»æÖÆÖĞĞÄÔ²
 	}
-	else if(1 == src_color.channels())//Èç¹ûÊÇ»Ò¶ÈÍ¼
+	else if(1 == modeOfPlot)//target+Ô²È¦
 	{
-		
+		Point pt1[4] = {pointForPlot,pointForPlot,pointForPlot,pointForPlot};//targetËÄÌõ×¼ĞÇÏßµÄÆğÊ¼µã
+		Point pt2[4] = {pointForPlot,pointForPlot,pointForPlot,pointForPlot};//targetËÄÌõ×¼ĞÇÏßµÄ½áÊøµã
+		//ÉèÖÃÏà¶ÔÆ«ÒÆÁ¿
+		pt1[0].y -= 20;	pt1[1].x += 20;	pt1[2].y += 20;	pt1[3].x -= 20;
+		pt2[0].y -= 70;	pt2[1].x += 70;	pt2[2].y += 70;	pt2[3].x -= 70;
+		for(int i = 0;i<4;i++)
+		{
+			line(src_color,pt1[i],pt2[i],color,4);//»æÖÆ×¼ĞÇÏß
+		}
+		circle(src_color,pointForPlot,5,color,4);//»æÖÆÖĞĞÄÔ²
 	}
+	else if(2 == modeOfPlot)//Ö±½Ó»æÖÆÔ²È¦
+	{
+			circle(src_color,pointForPlot,5,color,4);
+	}
+	return 0;
+}
+
+int lavaDetector::detectThickOfWool()//¼ì²âÑÒÃŞ³ÉÏËºñ¶È£¨ÏñËØ¼°mmÎªµ¥Î»£©
+{
+	/*Ïà¹Ø³ÉÔ±±äÁ¿£º
+		double dScale;//±ÈÀı³ß
+		int iThickOfWool_p;//ÑÒÃŞµÄºñ¶È£¨ÒÔÏñËØ¼Æ£©
+		double dThickOfWool_mm;//ÑÒÃŞµÄºñ¶È£¨Í¨¹ı±ÈÀı³ßÕÛËãÎªÒÔmm¼Æ£©
+		Point pPosOfBase;//»ù×¼µãµÄÏñËØ×ø±ê
+		Point pPosThickDetect;//³ÉÏË¼ì²âµãµÄ×ø±ê
+		Mat curImage_binary;//µ±Ç°¶şÖµÍ¼Ô­Ê¼Ö¡
+		Point pPosThickPlot;//³ÉÏË»æÖÆµãµÄ×ø±ê
+	*/
+	int iThickOfWool_p_tmp = iThickOfWool_p;
+	iThickOfWool_p = 0;
+	Point pStartPoint;//±éÀúÆğÊ¼µã
+	pStartPoint.x = pPosThickDetect.x;
+	pStartPoint.y = pPosOfBase.y;
+	int highY = 0;
+	int lowY = 0;
+	int pre = 0;
+	int current = 0;
+	for(int i = pStartPoint.y; i >= 0;i--)
+	{
+		current = curImage_binary.ptr<uchar>(i)[pStartPoint.x];
+		if(255 == current)
+		{
+			iThickOfWool_p++;
+		}
+		if(current==255 && pre ==0)
+		{
+			lowY = i;
+		}
+		if(current==0 && pre ==255)
+		{
+			highY = i;
+		}
+		pre = current;
+	}
+	//Òì³£Öµ£¨0µÈ£©£¬Ôò½øĞĞ¾ùÔÈ´¦Àí
+	if(((double)iThickOfWool_p) <= (0.3 * (double)iThickOfWool_p_tmp))
+	{
+		iThickOfWool_p = iThickOfWool_p_tmp * 0.9;
+	}
+	//È·¶¨³ÉÏË»æÖÆµãµÄ×ø±ê
+	pPosThickPlot.x = pStartPoint.x;
+	pPosThickPlot.y = (int)((lowY + highY)*0.5);
 	return 0;
 }
 
