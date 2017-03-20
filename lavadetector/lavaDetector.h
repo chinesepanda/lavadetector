@@ -37,6 +37,9 @@ private://私有成员函数
 	int getPosOfBase2();//用于确定基准点的位置2（特征匹配）
 	//确定岩棉检测点、比例尺、熔岩检测点
 	int getPosOfDetect();//确定岩棉检测点、比例尺、熔岩检测点
+	void select_sort(int array[], int n);//选择排序
+	//绘制程序
+	int plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color);//在图中绘制点的target
 private://私有成员变量
 	int iWidthOfStream_p;//下落流股的宽度（以像素计）
 	double dWidthOfStream_mm;//下落流股的宽度（通过比例尺折算为以mm计）
@@ -58,11 +61,18 @@ private://私有成员变量
 	int iWorkmode;//当前的工作模式：0：静态检测；1：动态检测；2：岩棉检测*
 	double dThreshold;//彩图转为二值图时的阈值*
 	//关键点匹配时的变量
-	vector<Mat> vDescriptors;//*
+	vector<Mat> vDescriptors;//每帧的描述子
 	vector<vector<KeyPoint>> vKeyPoints;//每帧的ORB关键点*
 	vector<vector<Point>> vPoints;//匹配后每帧的备选点*
 	vector<vector<DMatch>> vMatches;//测试2
 	double distance[10];//ceshi3
+	//确定成纤监测点的变量
+	int iBiggestDistance[5];//记录11-15帧成纤区高度最大值
+	int iCorresX[5];//11-15帧成纤区取得高度最大值下对应的x坐标
+	Point pPosThickDetect;//成纤检测点的坐标
+	int iRadiusOfCircle_p;//轴承半径的像素数
+    const double iRadiusOfCircle_mm;//轴承半径的毫米数
+	Point pPosStreamDetect;//流股检测点的坐标
 };
 
 #endif

@@ -9,11 +9,11 @@ using namespace std;
 using namespace cv;
 
 //¹¹ÔìÓëÎö¹¹º¯Êı
-lavaDetector::lavaDetector():iPeriod(20),dThreshold(25)
+lavaDetector::lavaDetector():iPeriod(50),dThreshold(22),iRadiusOfCircle_mm(400)
 {
 	iNumOfFrames = 0;
 }
-lavaDetector::lavaDetector(int period, double thresh) : iPeriod(period), dThreshold(thresh)
+lavaDetector::lavaDetector(int period, double thresh) : iPeriod(period), dThreshold(thresh),iRadiusOfCircle_mm(400)
 {
 	iNumOfFrames = 0;
 }
@@ -74,12 +74,11 @@ int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
 	}
 	else if (iNumOfFrames >= 11 && iNumOfFrames <= 15)//11-15Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢Á÷¹É¼à²âµã¡¢±ÈÀı³ß
 	{
+		getPosOfDetect();//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 		
-
 	}
 	else//¼ì²âÈıÏî²ÎÊı
 	{
-		
 
 	}
 	return 0;
@@ -108,6 +107,11 @@ int lavaDetector::getImageToShow(Mat& imagetoshow)//»æÖÆ²¢»ñÈ¡´ıÏÔÊ¾µÄ¼ì²â½á¹û,×
 		if(iNumOfFrames >= 11)
 		{
 			circle(imageToShow_color, pPosOfBase, 5, Scalar(255, 0, 0), 3);//»æÖÆ¹Ø¼üµã
+		}
+		if(iNumOfFrames >= 15)
+		{	
+			circle(imageToShow_color,pPosThickDetect,5,Scalar(255,0,0),4);
+			circle(imageToShow_color,pPosStreamDetect,5,Scalar(0,0,255),4);
 		}
 		imageToShow_color.copyTo(imagetoshow);
 		
@@ -345,32 +349,94 @@ int lavaDetector::getPosOfDetect()//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 {
 	const Mat& binary = curImage_binary;
 	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨11-15Ö¡ÄÚ¶¼Ö´ĞĞ£¬15Ö¡×îÖÕÈ·¶¨£©*/
-	int baseX = pPosOfBase.x;//»ù×¼µãµÄx
-	int baseY = pPosOfBase.y;//»ù×¼µãµÄy
-	vector<int> distance;//¼ÇÂ¼ÉÏÏÂ¾àÀë
-	for(int x = baseX;x < (sizeOfCur.width - baseX); x++)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
+	const int baseX = pPosOfBase.x;//»ù×¼µãµÄx
+	const int baseY = pPosOfBase.y;//»ù×¼µãµÄy
+	vector<int> vDistance;//¼ÇÂ¼ÉÏÏÂ¾àÀë
+	vector<int> vX;
+	for(int x = baseX;x >= 0; x--)//´Ó»ù×¼µã³ö·¢£¬Ïò×óºáÏò±éÀú
 	{
+		vX.push_back(x);
 		if(binary.ptr<uchar>(baseY)[x] == 255)//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª255£¬Ôò¼ÌĞøÏò×ó±éÀú
 		{
-			distance.push_back(baseY);
+			vDistance.push_back(0);//°Ñµ±Ç°¾àÀëÉèÎª¿ÉÄÜµÄ×îĞ¡Öµ0
 		}
 		else//Èç¹ûµ±Ç°ÆğÊ¼ÏñËØÎª0£¬Ôò¿ªÊ¼ÏòÉÏ±éÀú
 		{
-			for(int y = baseY; y > 0; y--)//µ±Ç°µãÏòÉÏ±éÀú
+			for(int y = baseY; y >= 0; y--)//µ±Ç°µãÏòÉÏ±éÀú
 			{
 				if(binary.ptr<uchar>(y)[x] == 255 && binary.ptr<uchar>(y+1)[x] == 0)//Èç¹û¸ÃµãÁÁ¶È¸ÕºÃÓÉ0±äÎª255£¬ÔòÍ£Ö¹ÏòÉÏ
 				{
-					distance.push_back(baseY - y);//¼ÇÂ¼¾àÀë
+					vDistance.push_back(baseY - y);//¼ÇÂ¼¾àÀë
 					break;	
 				}
+				if(0 == y)
+				{
+					vDistance.push_back(0);//ÏòÉÏ±éÀúÖÁ×î¶¥¶Ë£¬ÈÔÈ»Ã»ÓĞÂú×ãÌõ¼şµÄÇé¿ö£¨¸ÕºÃÓÉ0±äÎª255£©£¬Ôò¾àÀëÉèÎª0
+				}
 			}
+			
 		}
 	}
-
+	//Ñ°ÕÒvDÖĞµÄ×î´ó¾àÀë
+	vector<int>::iterator biggest = max_element(begin(vDistance), end(vDistance));//µü´úÆ÷
+	iBiggestDistance[iNumOfFrames - 11] = *biggest;//´æÈë×î´ó¾àÀë
+	iCorresX[iNumOfFrames - 11] = vX[std::distance(std::begin(vDistance), biggest)];//´æÈë×î´ó¾àÀë¶ÔÓ¦µÄx×ø±ê
+	//ÇåÀí
+	vDistance.clear();
+	vX.clear();
 	/*È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã*/
 	if(15 == iNumOfFrames)
 	{
-	//
+		/*³ÉÏË¼à²âµã*/
+		int iBiggestDistance_sorted[5] = {0};
+		memcpy(iBiggestDistance_sorted,iBiggestDistance,5*sizeof(int));//´´½¨Ò»¸ö¿½±´Êı×é
+		select_sort(iBiggestDistance_sorted, 5);//¶Ô¿½±´Êı×é½øĞĞÅÅĞò
+		for(int i = 0;i<5;i++)
+		{
+			if(iBiggestDistance[i] == iBiggestDistance_sorted[2])//»ñÈ¡Êı×éÖĞÎ»Êı¶ÔÓ¦µÄindex¼°¶ÔÓ¦µÄx×ø±ê
+			{
+				pPosThickDetect.x = iCorresX[i];//³ÉÏË¼à²âµãµÄ×ø±ê
+				pPosThickDetect.y = baseY - iBiggestDistance_sorted[2];
+
+				iRadiusOfCircle_p = baseX - iCorresX[i];//Öá³Ğ°ë¾¶µÄÏñËØÊı
+				dScale = iRadiusOfCircle_mm /((double)iRadiusOfCircle_p);//¼ÆËã±ÈÀı³ß
+
+				pPosStreamDetect.x = baseX;//Á÷¹É¼ì²âµãµÄx×ø±êÓë»ù×¼µãx×ø±êÏàÍ¬
+			    pPosStreamDetect.y = pPosThickDetect.y - iBiggestDistance_sorted[2];//Á÷¹É¼ì²âµãµÄy×ø±êµÈÓÚ³ÉÏË¼à²âµãµÄy×ø±ê¼õÈ¥Öá³Ğ×İ°ë¾¶
+				break;
+			}
+		}
 	}
 	return 0;
+}
+
+int lavaDetector::plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color)//ÔÚÍ¼ÖĞ»æÖÆµãµÄtarget
+{
+
+	if(3 == src_color.channels())//Èç¹ûÊÇ²ÊÉ«Í¼
+	{
+		
+	}
+	else if(1 == src_color.channels())//Èç¹ûÊÇ»Ò¶ÈÍ¼
+	{
+		
+	}
+	return 0;
+}
+
+void lavaDetector::select_sort(int array[], int n)//Ñ¡ÔñÅÅĞò
+{
+	for(int i=0;i<n;i++)
+	{
+		for(int j=i+1;j<n;j++)
+		{
+			if(array[j]<array[i])
+			{
+				int t;
+				t=array[i];
+				array[i]=array[j];
+				array[j]=t;
+			}
+		}
+	}
 }
