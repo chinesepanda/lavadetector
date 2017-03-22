@@ -13,7 +13,7 @@ class lavaDetector
 public:
 	//构造析构函数
 	lavaDetector();
-	lavaDetector(int period,double thresh, int posOfZero_p);//检测周期--二值化分割阈值--零点x坐标
+	lavaDetector(int period,double thresh, int posOfZero_p,int mode);//检测周期--二值化分割阈值--零点x坐标--检测模式
 	~lavaDetector();
 
 	//每帧的初始化步骤
@@ -29,8 +29,8 @@ public:
 	int getImageToShow(Mat& imagetoshow);//绘制并获取待显示的检测结果,注意不同模式下显示的图像也不同！
 	int getParameters_p(int& thickOfWool_p/*成纤厚度*/, int& widthOfStream_p/*流股宽度*/,int& rePosOfDrop_p/*落点偏移量*/);//获取三项待检测参数（像素为单位）
 	int getParameters_mm(double& thickOfWool_mm,double& widthOfStream_mm, double& rePosOfDrop_mm);//获取三项待检测参数（mm为单位）
-
-
+	int getWRONG_2(int& wrong);
+	int getWRONG_1(int& wrong);
 private://私有成员函数
 	int colorToBinary(Mat src_color,Mat& dst_binary,double dThreshold);//把输入的原始彩色帧转换为二值帧
 	int selectContours(Mat& binary);//对二值图中的多轮廓进行筛选，去除噪声点，并填补孔洞
@@ -50,6 +50,8 @@ private://私有成员函数
 	int plotPointTarget(Mat& src_color,Point pointForPlot,const Scalar& color,int modeOfPlot);//在图中绘制点的target
 	int plotLine(Mat& src_color,Point pointForPlot,const Scalar& color,int modeOfPlot);//在图中绘制直线
 private://私有成员变量
+	/*控制全局的参数*/
+	const int THEMODE;//检测模式：0：自动检测 1：基于预设置的参数进行检测
 	/*待检测的诸项参数*/
 	int iWidthOfStream_p;//下落流股的宽度（以像素计）
 	double dWidthOfStream_mm;//下落流股的宽度（通过比例尺折算为以mm计）
@@ -72,7 +74,10 @@ private://私有成员变量
 	Mat imageToShow_color;//最终待显示的图像
 	Size sizeOfCur;//当前图像尺寸
 	int WRONG;//检测错误
-	/**/
+	/*
+	WRONG == -4;//错误：当前帧内无目标(全黑)
+
+	*/
 	/*预设置全局参数*/
 	int iNumOfFrames;//当前帧序号*
 	const int iPeriod;//检测周期，以帧数为单位*
@@ -95,6 +100,12 @@ private://私有成员变量
     const double iRadiusOfCircle_mm;//轴承半径的毫米数
 	Point pPosStreamDetect;//流股检测点的坐标
 	Point pPosStreamPlot;//流股绘制点的坐标
+	/*动态视频检测的变量*/
+	vector<long> vArea;
+	vector<double> vNumOfKeyPoints;
+	const int iPeriodOfMod1;//动态视频检测周期，以帧数为单位
+	int iNumOfFramesOfMod1;//mod1当前帧序号
+	int WRONG_MOD1;//检测错误
 };
 
 #endif

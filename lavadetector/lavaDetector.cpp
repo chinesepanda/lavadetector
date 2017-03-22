@@ -9,23 +9,27 @@ using namespace std;
 using namespace cv;
 
 //¹¹ÔìÓëÎö¹¹º¯Êı
-lavaDetector::lavaDetector():iPeriod(30)/*¼ì²âÖÜÆÚ*/,dThreshold(25)/*·Ö¸îµÄãĞÖµ*/,iRadiusOfCircle_mm(400)/*Öá³ĞÔ¤ÉèÖÃµÄ°ë¾¶*/
+lavaDetector::lavaDetector():iPeriod(300)/*¼ì²âÖÜÆÚ*/,dThreshold(25)/*·Ö¸îµÄãĞÖµ*/,iRadiusOfCircle_mm(400)/*Öá³ĞÔ¤ÉèÖÃµÄ°ë¾¶*/,iPeriodOfMod1(10)/*¶¯Ì¬ÊÓÆµ¼ì²âÖÜÆÚ£¬ÒÔÖ¡ÊıÎªµ¥Î»*/,THEMODE(0)
 {
-	iNumOfFrames = 0;
+	iNumOfFrames = 0;//mod2µ±Ç°Ö¡ĞòºÅ
 	iThickOfWool_p = 0;
 	iPosOfZero_p = 1614;
-	pPosOfBase_tmp.x = 1614;
-	pPosOfBase_tmp.y = 1346;
+	pPosOfBase_tmp.x = 1614;//
+	pPosOfBase_tmp.y = 1349;
 	WRONG = 0;
+	WRONG_MOD1 = 0;
+	iNumOfFramesOfMod1 = 0;//mod1µ±Ç°Ö¡ĞòºÅ
 }
-lavaDetector::lavaDetector(int period, double thresh, int posOfZero_p) : iPeriod(period), dThreshold(thresh),iRadiusOfCircle_mm(400)
+lavaDetector::lavaDetector(int period, double thresh, int posOfZero_p,int mode) : iPeriod(period), dThreshold(thresh),iRadiusOfCircle_mm(400),iPeriodOfMod1(10)/*¶¯Ì¬ÊÓÆµ¼ì²âÖÜÆÚ£¬ÒÔÖ¡ÊıÎªµ¥Î»*/,THEMODE(mode)
 {
-	iPosOfZero_p = posOfZero_p;
+	iPosOfZero_p = posOfZero_p;//³õÊ¼Áãµãx×ø±ê
 	iNumOfFrames = 0;
 	iThickOfWool_p = 0;
 	pPosOfBase_tmp.x = 1614;
-	pPosOfBase_tmp.y = 1346;
+	pPosOfBase_tmp.y = 1349;
 	WRONG = 0;
+	 WRONG_MOD1 = 0;
+	iNumOfFramesOfMod1 = 0;//mod1µ±Ç°Ö¡ĞòºÅ
 }
 lavaDetector::~lavaDetector()
 {
@@ -34,10 +38,15 @@ lavaDetector::~lavaDetector()
 //public:
 int lavaDetector::readCurrentFrame(Mat src, int mode/*Éè¶¨µ±Ç°¹¤×÷Ä£Ê½*/)//¶ÁÈ¡µ±Ç°Ö¡
 {
+	WRONG = 0;
 	iWorkmode = mode;
 	if (iWorkmode != 0 && iWorkmode != 1 && iWorkmode != 2)
 	{
 		return -1;//¹¤×÷Ä£Ê½´íÎó
+	}
+	if(1 == iWorkmode)//Èç¹ûÊÇÄ£Ê½2,¶ÔÖ¡Êı½øĞĞ¼ÆÊı
+	{
+		iNumOfFramesOfMod1++;
 	}
 	if (2 == iWorkmode)//Èç¹ûÊÇÄ£Ê½3£¬ÔòÒÔiPeriodÎªÖÜÆÚ£¬¶ÔÖ¡Êı½øĞĞ¼ÆÊı
 	{
@@ -47,6 +56,7 @@ int lavaDetector::readCurrentFrame(Mat src, int mode/*Éè¶¨µ±Ç°¹¤×÷Ä£Ê½*/)//¶ÁÈ¡µ
 			iNumOfFrames = 1;
 		}
 	}
+	/*Í¨ÓÃ´úÂë*/
 	src.copyTo(curImage_color);//»ñÈ¡µ±Ç°²ÊÉ«Ö¡
 	colorToBinary(curImage_color, curImage_binary, dThreshold);//²ÊÉ«Ö¡×ªÎª¶şÖµÖ¡
 	selectContours(curImage_binary);//¶ÔÂÖÀª´óĞ¡½øĞĞÉ¸Ñ¡£¬ÅÅ³ıÔëÉùµã
@@ -60,6 +70,74 @@ int lavaDetector::staticImageDetect()//¾µÍ·¾²Ì¬ÄÚÈİ¼ì²â mode 0
 }
 int lavaDetector::dynamicImageDetect()//¾µÍ·¶¯Ì¬ÄÚÈİ¼ì²â mode 1
 {
+	if (iWorkmode != 1)//¼ì²âÄ£Ê½ÊÇ·ñÆ¥Åä
+	{
+		return -1;//Ä£Ê½´íÎó
+	}
+	
+	if( iNumOfFramesOfMod1<= iPeriodOfMod1)//1-10Ö¡
+	{
+		/*¢ÙÂÖÀªÃæ»ı*/
+		vector< vector<Point> > contours;   // ÂÖÀª   
+		vector< Vec4i > hierarchy;    // ÂÖÀªµÄ½á¹¹ĞÅÏ¢ 
+		contours.clear();
+		hierarchy.clear();
+		Mat tmp_binary = curImage_binary.clone();
+		findContours(tmp_binary, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+		long area = 0;
+		for (size_t i = 0; i < contours.size(); i++)
+		{
+			area += fabs(contourArea(Mat(contours[i])));
+		}
+		vArea.push_back(area);//´æÈëÈİÆ÷
+		/*¢ÚÌØÕ÷µã*/
+		//°ÑÔ­Í¼Ïñ×ª»»Îª»Ò¶ÈÍ¼£¬²¢²ÃÇĞ
+		const double rate = 0.4;//È¥µôÉÏ°ë²¿·ÖµÄ±ÈÀı
+		Mat grayImage;
+		cvtColor(curImage_color, grayImage, CV_BGR2GRAY);
+		Mat ROIImage = grayImage(Range((int)(rate*sizeOfCur.height), sizeOfCur.height), Range(0, sizeOfCur.width));
+		//µ±Ç°Ö¡µÄÌØÕ÷µã¼ì²â
+		OrbFeatureDetector featureDetector;//ORBµã¼ì²âÆ÷
+		vector<KeyPoint> keyPoints;//¹Ø¼üµã
+		Mat descriptors;//¹Ø¼üµãÌØÕ÷ÃèÊö×Ó
+		featureDetector.detect(ROIImage, keyPoints);//¼ì²âÌØÕ÷¹Ø¼üµã
+		OrbDescriptorExtractor featureExtractor;//ORBµãÌØÕ÷ÌáÈ¡Æ÷
+		featureExtractor.compute(ROIImage, keyPoints, descriptors);//¼ÆËã¹Ø¼üµãµÄÌØÕ÷ÃèÊö×Ó
+		//´æÈë³ÉÔ±±äÁ¿ÈİÆ÷
+		double numOfKeypoints;
+		if(keyPoints.size() > 10)
+		{
+			numOfKeypoints = 10.0;
+		}
+		else
+		{
+			numOfKeypoints = (double)(keyPoints.size());
+		}
+		vNumOfKeyPoints.push_back(numOfKeypoints);//´æÈëµ±Ç°Ö¡µÄÌØÕ÷µãÊıÁ¿
+		keyPoints.clear();
+		/*¼ì²âÖÜÆÚ½áÊø£¬Í³¼Æ*/
+		if(iPeriodOfMod1 == iNumOfFramesOfMod1)//mod1µÚ10Ö¡Ê±£¬¼ÆËãÆ½¾ùÂÖÀªÃæ»ı
+		{
+			long meanArea = 0;
+			double meanNumOfKeypoints = 0.0;
+			for(int i = 0;i < iPeriodOfMod1;i++)
+			{
+				meanArea += (vArea[i]/iPeriodOfMod1);
+				meanNumOfKeypoints += vNumOfKeyPoints[i]/iPeriodOfMod1;
+			}
+			vArea.clear();//ÇåÀí
+			vNumOfKeyPoints.clear();
+			cout<<"meanArea"<<meanArea<<endl;
+			if(meanArea < 120000)
+			{
+				 WRONG_MOD1 = -1;//¼ì²âÃæ»ı¹ıĞ¡
+			}
+			if(meanNumOfKeypoints < 5)
+			{
+				 WRONG_MOD1 = -2;//ÌØÕ÷µã¹ıÉÙ
+			}
+		}
+	}
 	return 0;
 }
 int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
@@ -80,18 +158,36 @@ int lavaDetector::imageDetect()//ÑÒÃŞ¼ì²â mode 2:
 			pPosOfBase.x = 0;
 			pPosOfBase.y = 0;
 		}
-		getPosOfBase2();//È·¶¨µ±Ç°ÖÜÆÚµÄ¹Ø¼üµã
+
+		if(THEMODE == 0)//×Ô¶¯¼ì²âÄ£Ê½
+		{
+			getPosOfBase2();//È·¶¨µ±Ç°ÖÜÆÚµÄ»ù×¼µã
+		}
+		else//Ô¤ÉèÖÃÄ£Ê½
+		{
+			pPosOfBase = pPosOfBase_tmp;//Ô¤ÉèÖÃ»ù×¼µã
+		}
 	}
 	else if (iNumOfFrames >= 11 && iNumOfFrames <= 21)//11-15Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢Á÷¹É¼à²âµã¡¢±ÈÀı³ß
 	{
-		getPosOfDetect();//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
+		if(THEMODE == 0)//×Ô¶¯¼ì²âÄ£Ê½
+		{
+			getPosOfDetect();//È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
+		}
+		else//Ô¤ÉèÖÃÄ£Ê½
+		{
+			pPosThickDetect.x = 1255;
+			pPosThickDetect.y = 1018;
+			pPosStreamDetect.x = 1614;
+			pPosStreamDetect.y = 687;
+			dScale = 1.11421;
+		}
 		
 	}
 	else//´Ó22Ö¡¿ªÊ¼£¬¼ì²âÈıÏîÊı¾İ 
 	{
 		detectThickOfWool();//¼ì²â³ÉÏËºñ¶È
 		detectWidthOfStream();//¼ì²âÁ÷¹É¿í¶È¡¢ÏÂÂäµã
-
 	}
 
 	return 0;
@@ -143,10 +239,8 @@ int lavaDetector::getImageToShow(Mat& imagetoshow)//»æÖÆ²¢»ñÈ¡´ıÏÔÊ¾µÄ¼ì²â½á¹û,×
 
 
 		}
-
-		imageToShow_color.copyTo(imagetoshow);
-		
 	}
+	imageToShow_color.copyTo(imagetoshow);
 	return 0;
 }
 int lavaDetector::getParameters_p(int& thickOfWool_p/*³ÉÏËºñ¶È*/, int& widthOfStream_p/*Á÷¹É¿í¶È*/,int& rePosOfDrop_p/*ÂäµãÆ«ÒÆÁ¿*/)//»ñÈ¡ÈıÏî´ı¼ì²â²ÎÊı£¨ÏñËØÎªµ¥Î»£©
@@ -169,7 +263,16 @@ int lavaDetector::getParameters_mm(double& thickOfWool_mm,double& widthOfStream_
 	rePosOfDrop_mm = dRePosOfDrop_mm;
 	return 0;
 }
-	
+int lavaDetector::getWRONG_2(int& wrong)
+{
+	wrong = WRONG;
+	return 0;
+}
+int lavaDetector::getWRONG_1(int& wrong)
+{
+	wrong = WRONG_MOD1;
+	return 0;
+}
 //private:
 int lavaDetector::colorToBinary(Mat src_color, Mat& dst_binary, double dThreshold)//°ÑÊäÈëµÄÔ­Ê¼²ÊÉ«Ö¡×ª»»Îª¶şÖµÖ¡
 {
@@ -196,6 +299,11 @@ int lavaDetector::selectContours(Mat& binary)//¶Ô¶şÖµÍ¼ÖĞµÄ¶àÂÖÀª½øĞĞÉ¸Ñ¡£¬È¥³ıÔ
 		{
 			filterContours.push_back(contours[i]);
 		}
+	}
+	//Èç¹ûÈ«¾°ÎªºÚ
+	if(filterContours.size() == 0)
+	{
+		WRONG = -4;//´íÎó£ºµ±Ç°Ö¡ÄÚÎªÎŞÄ¿±ê
 	}
 	binary.setTo(0);
 	drawContours(binary, filterContours, -1, Scalar(255), CV_FILLED); //8, hierarchy);   
@@ -374,6 +482,7 @@ int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 		vector<Point> points;//¹Ø¼üµã×ª»»ÎªÆÕÍ¨µã
 		points.push_back(keyPoints[matches[0].trainIdx].pt);
 		distance[iNumOfFrames-1] = matches[0].distance;//µ±Ç°Ö¡×îÆ¥ÅäµÄÌØÕ÷µãÓëÄ¿±êµãµÄÌØÕ÷¾àÀë
+		//cout<<"¾àÀë£º "<<matches[0].distance<<endl;
 		points[0].y += (int)(rate*sizeOfCur.height);//»Ö¸´ÎªÔ­Í¼ÏñÖĞµÄ×ø±êµã
 		vPoints.push_back(points);//×îÆ¥Åäµã×ø±ê´æÈë³ÉÔ±±äÁ¿ÈİÆ÷
 		index[iNumOfFrames-1] = 1;//index[]==1,ËµÃ÷µ±Ç°Ö¡µÄÊı¾İÓĞĞ§
@@ -388,6 +497,7 @@ int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 		index[iNumOfFrames-1] = 0;//index[]==0,ËµÃ÷µ±Ç°Ö¡µÄÊı¾İÎŞĞ§
 		distance[iNumOfFrames-1] = 80000;
 		points.clear();
+		//cout<<"ÎŞ¹Ø¼üµã"<<endl;
 	}
 	//ÇåÀíÈİÆ÷
 	keyPoints.clear();
@@ -414,12 +524,12 @@ int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 				numOfFrames++;
 			}
 		}
-
-		if(10 == k || numOfFrames<=3)//Èç¹û10Ö¡¶¼Ã»ÓĞ¹Ø¼üµã»òÕßÓĞ¹Ø¼üµãµÄÖ¡ÊıĞ¡ÓÚµÈÓÚ3
+		
+		if(10 == k || numOfFrames<=5)//Èç¹û10Ö¡¶¼Ã»ÓĞ¹Ø¼üµã»òÕßÓĞ¹Ø¼üµãµÄÖ¡ÊıĞ¡ÓÚµÈÓÚ5
 		{
 			pPosOfBase = pPosOfBase_tmp;
 			WRONG = -1;//´íÎóĞÅÏ¢£º¹ıÉÙµÄÆ¥Åäµã
-			cout<<"WRONG = -1;//´íÎóĞÅÏ¢£º¹ıÉÙµÄÆ¥Åäµã"<<endl;
+			//cout<<"WRONG = -1;//´íÎóĞÅÏ¢£º¹ıÉÙµÄÆ¥Åäµã"<<endl;
 		}
 		else
 		{
@@ -431,9 +541,16 @@ int lavaDetector::getPosOfBase2()//ÓÃÓÚÈ·¶¨»ù×¼µãµÄÎ»ÖÃ£¨·½·¨¶ş£©
 					sIndex = i;
 				}
 			}
-			pPosOfBase = vPoints[sIndex][0];
+			if(num<=100)
+			{
+				pPosOfBase = vPoints[sIndex][0];
+			}
+			else
+			{
+				pPosOfBase = pPosOfBase_tmp;
+			}
 		}
-		
+		cout<<"pPosOfBase.x"<<pPosOfBase.x<<" pPosOfBase.y "<<pPosOfBase.y<<endl;
 		/*Ñ°ÕÒ±éÀúµÄ×ó±ß½ç*/
 		/*
 		edgeX = pPosOfBase.x;
@@ -493,7 +610,7 @@ int lavaDetector::getPosOfDetect()//11-21Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 		{
 			edgeX = pPosOfBase.x;
 			WRONG = -2;//´íÎóĞÅÏ¢£º¼ì²â²»µ½×ó²à³ÉÏË
-			cout<<"WRONG = -2;//´íÎóĞÅÏ¢£º¼ì²â²»µ½×ó²à³ÉÏË"<<endl;
+			//cout<<"WRONG = -2;//´íÎóĞÅÏ¢£º¼ì²â²»µ½×ó²à³ÉÏË"<<endl;
 		}
 	}
 	
@@ -548,7 +665,7 @@ int lavaDetector::getPosOfDetect()//11-21Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 		if(noZero <= 2)//Èç¹ûÃ»ÓĞÓĞ×ã¹»µÄÖ¡¿ÉÒÔÕÒµ½ºÏÊÊµÄ¾àÀë
 		{
 			WRONG = -3;//´íÎóĞÅÏ¢£ºÃ»ÓĞÓĞ×ã¹»µÄÖ¡¿ÉÒÔÕÒµ½ºÏÊÊµÄ¾àÀë
-			cout<<"WRONG = -3;//´íÎóĞÅÏ¢£ºÃ»ÓĞÓĞ×ã¹»µÄÖ¡¿ÉÒÔÕÒµ½ºÏÊÊµÄ¾àÀë"<<endl;
+			//cout<<"WRONG = -3;//´íÎóĞÅÏ¢£ºÃ»ÓĞÓĞ×ã¹»µÄÖ¡¿ÉÒÔÕÒµ½ºÏÊÊµÄ¾àÀë"<<endl;
 		}
 		for(int i = 0;i<11;i++)
 		{
@@ -556,12 +673,13 @@ int lavaDetector::getPosOfDetect()//11-21Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 			{
 				pPosThickDetect.x = iCorresX[i];//³ÉÏË¼à²âµãµÄ×ø±ê
 				pPosThickDetect.y = baseY - iBiggestDistance_sorted[noZero/2];
-
+				cout<<"pPosThickDetect.x "<<pPosThickDetect.x<<"pPosThickDetect.y "<<pPosThickDetect.y <<endl;
 				iRadiusOfCircle_p = baseX - iCorresX[i];//Öá³Ğ°ë¾¶µÄÏñËØÊı
 				dScale = ((double)iRadiusOfCircle_mm) /((double)iRadiusOfCircle_p);//¼ÆËã±ÈÀı³ß
-
+				cout<<"dScale"<<dScale<<endl;
 				pPosStreamDetect.x = baseX;//Á÷¹É¼ì²âµãµÄx×ø±êÓë»ù×¼µãx×ø±êÏàÍ¬
 				pPosStreamDetect.y = pPosThickDetect.y - iBiggestDistance_sorted[noZero/2];//Á÷¹É¼ì²âµãµÄy×ø±êµÈÓÚ³ÉÏË¼à²âµãµÄy×ø±ê¼õÈ¥Öá³Ğ×İ°ë¾¶
+				cout<<"pPosStreamDetect.x "<<pPosStreamDetect.x<<"pPosStreamDetect.y "<<pPosStreamDetect.y <<endl;
 				break;
 			}
 		}
@@ -575,7 +693,7 @@ int lavaDetector::getPosOfDetect()//11-21Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 int lavaDetector::getPosOfDetect2()//Ã¿Ö¡È·¶¨ÑÒÃŞ¼ì²âµã¡¢±ÈÀı³ß¡¢ÈÛÑÒ¼ì²âµã
 {
 	
-	 double t1=(double)getTickCount();
+	double t1=(double)getTickCount();
 	const Mat& binary = curImage_binary;
 	/*±éÀúÑ°ÕÒ×ó²àÑÒÃŞ¼ì²âÎ»ÖÃ£¨£©*/
 	const int baseX = pPosOfBase.x;//»ù×¼µãµÄx

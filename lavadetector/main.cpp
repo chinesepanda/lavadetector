@@ -23,11 +23,11 @@ int main()
 	Mat imagetoshow_binary;
 	lavaDetector myDetector;
 
-	for(int i = 0;i<48;i++)  //137! //170!
+	for(int i = 0;i<200;i++)  //137! //170!
 	{
 		video>>firstImage;
 	}
-
+	int frame = 0;
 	while(true)
 	{
 		video>>firstImage;
@@ -35,9 +35,39 @@ int main()
 		{
 			return -1;
 		}
+		frame++;
+
+		if(frame <= 10)
+		{
+			int w;
+			myDetector.readCurrentFrame(firstImage,1);
+			myDetector.dynamicImageDetect();//¾µÍ·¶¯Ì¬ÄÚÈÝ¼ì²â mode 1
+			myDetector.getWRONG_1(w);
+			if(w!=0)
+			{
+				cout<<"1:"<<w<<endl;
+				cout<<"---------------"<<endl;
+			}
+		}
+		else
+		{
+			int w;
+			myDetector.readCurrentFrame(firstImage,2);
+			myDetector.imageDetect();
+			myDetector.getWRONG_2(w);
+			if(w!=0)
+			{
+				cout<<"2:"<<w<<endl;
+				cout<<"---------------"<<endl;
+			}
+			myDetector.getWRONG_2(w);
+			if(w!=0)
+			{
+				cout<<"2:"<<w<<endl;
+				cout<<"---------------"<<endl;
+			}
+		}
 		
-		myDetector.readCurrentFrame(firstImage,2);
-		myDetector.imageDetect();
 		myDetector.getBinaryImage(imagetoshow_binary);
 		myDetector.getImageToShow(imagetoshow);
 
@@ -47,7 +77,7 @@ int main()
 		imshow("image_binary",imagetoshow_binary);
 		//myDetector.getImageToShow(imagetoshow);
 		//imshow("image",imagetoshow);
-		if(waitKey(10) == 27 )
+		if(waitKey(30) == 27 )
 		{
 			break;
 		}
