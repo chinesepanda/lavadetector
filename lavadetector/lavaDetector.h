@@ -23,7 +23,7 @@ public:
 	int dynamicImageDetect();//镜头动态内容检测 mode 1
 	int imageDetect();//岩棉检测 mode 2: 
 	//全局操作函数
-	int setPosOfZero_p(int& posOfZero_p);//设置零点x坐标
+	int setPosOfZero_p();//设置零点x坐标
 	//获得各项检测结果（注意不同模式下的情况）
 	int getBinaryImage(Mat& imagetoshow_binary);
 	int getImageToShow(Mat& imagetoshow);//绘制并获取待显示的检测结果,注意不同模式下显示的图像也不同！
@@ -51,7 +51,7 @@ private://私有成员函数
 	int plotLine(Mat& src_color,Point pointForPlot,const Scalar& color,int modeOfPlot);//在图中绘制直线
 private://私有成员变量
 	/*控制全局的参数*/
-	const int THEMODE;//检测模式：0：自动检测 1：基于预设置的参数进行检测
+	int THEMODE;//检测模式：0：自动检测 1：基于预设置的参数进行检测
 	/*待检测的诸项参数*/
 	int iWidthOfStream_p;//下落流股的宽度（以像素计）
 	double dWidthOfStream_mm;//下落流股的宽度（通过比例尺折算为以mm计）
@@ -106,6 +106,11 @@ private://私有成员变量
 	const int iPeriodOfMod1;//动态视频检测周期，以帧数为单位
 	int iNumOfFramesOfMod1;//mod1当前帧序号
 	int WRONG_MOD1;//检测错误
+	/*待描绘点：A成纤区下边缘点，B成纤区上边缘点，C流股落点检测点，D流股落点绘制点*/
+	Point pPosThickDown;//A
+	Point pPosThickUp;//B
+	Point pPosStreamDropDtect;//C
+	Point pPosStreamDropPlot;//D
 };
 
 #endif
